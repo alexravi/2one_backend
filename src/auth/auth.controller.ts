@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -26,6 +27,16 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('google')
+  @ApiOperation({ summary: 'Log in or Register with Google', description: 'Authenticates with Google ID token and returns a JWT access token.' })
+  @ApiBody({ type: GoogleAuthDto })
+  @ApiResponse({ status: 200, description: 'Login successful. Returns JWT token and user info.' })
+  @ApiResponse({ status: 401, description: 'Invalid Google token.' })
+  googleLogin(@Body() googleAuthDto: GoogleAuthDto) {
+    return this.authService.googleLogin(googleAuthDto);
   }
 
   @Post('logout')
