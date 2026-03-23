@@ -17,9 +17,9 @@ async function bootstrap() {
 
   // Swagger / OpenAPI Setup
   const config = new DocumentBuilder()
-    .setTitle('2one Voice Data Collection API')
+    .setTitle('2une Voice Data Collection API')
     .setDescription(
-      'Backend API for the 2one voice data collection platform. ' +
+      'Backend API for the 2une voice data collection platform. ' +
       'Users upload phone call recordings and get paid for approved audio.',
     )
     .setVersion('1.0')

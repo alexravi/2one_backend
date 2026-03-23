@@ -48,4 +48,12 @@ export class PayoutsController {
     const userId = req.user.id;
     return this.payoutsService.requestPayout(userId, dto);
   }
+  @Post('bank-details/verify')
+  @ApiOperation({ summary: 'Submit bank details for verification' })
+  @ApiResponse({ status: 200, description: 'Bank details submitted.' })
+  async submitBankVerification(@Req() req: any, @Body() body: any) {
+    const userId = req.user.id;
+    console.log(`[UserId: ${userId}] Bank verification submitted:`, body);
+    return { success: true, message: 'Bank details submitted for verification' };
+  }
 }
