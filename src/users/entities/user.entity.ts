@@ -4,6 +4,7 @@ import { Recording } from '../../recordings/entities/recording.entity';
 import { Wallet } from '../../wallets/entities/wallet.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 import { PayoutRequest } from '../../payouts/entities/payout-request.entity';
+import { PalmSubmission } from '../../palms/entities/palm-submission.entity';
 
 @Entity('users')
 export class User {
@@ -47,6 +48,9 @@ export class User {
 
   @OneToMany(() => Recording, (recording) => recording.user)
   recordings: Recording[];
+
+  @OneToMany(() => PalmSubmission, (submission) => submission.user)
+  palm_submissions: PalmSubmission[];
 
   @OneToOne(() => Wallet, (wallet) => wallet.user)
   wallet: Wallet;

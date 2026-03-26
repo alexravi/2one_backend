@@ -64,4 +64,70 @@ export class UploadController {
       );
     }
   }
+
+  @Post('presigned-url-image')
+  @ApiOperation({
+    summary: 'Generate a presigned upload URL for palm images',
+    description: 'Returns a signed Azure Blob Storage URL for the client to upload palm photos directly.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        filename: { type: 'string', example: 'right_back_bg1.jpg', description: 'Original filename with extension' },
+      },
+      required: ['filename'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns upload_url and file_id.',
+    schema: {
+      type: 'object',
+      properties: {
+        upload_url: { type: 'string', description: 'Signed Azure Blob Storage URL for direct upload' },
+        file_id: { type: 'string', description: 'Unique file identifier to use when registering the palm submission' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized — missing or invalid JWT.' })
+  @ApiResponse({ status: 503, description: 'Azure Blob Storage not configured.' })
+  async getPresignedImageUrl(@Body('filename') originalFilename: string, @Req() req: any) {
+    if (!this.azureBlobService.isConfigured) {
+      throw new HttpException(
+        'Azure Blob Storage is not configured. Please set AZURE_STORAGE_CONNECTION_STRING in your .env file.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    if (!originalFilename) {
+      throw new HttpException('filename is required in request body.', HttpStatus.BAD_REQUEST);
+    }
+
+    const userId = req.user.id;
+    const fileExtension = originalFilename.split('.').pop()?.toLowerCase();
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      throw new HttpException(
+        `Unsupported image extension. Allowed: ${allowedExtensions.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const uniqueFilename = `${userId}/palm/${uuidv4()}.${fileExtension}`;
+
+    try {
+      const uploadUrl = await this.azureBlobService.generatePresignedUrl(uniqueFilename);
+      return {
+        upload_url: uploadUrl,
+        file_id: uniqueFilename,
+      };
+    } catch (err: any) {
+      throw new HttpException(
+        `Failed to generate upload URL: ${err.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

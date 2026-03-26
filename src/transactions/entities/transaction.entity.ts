@@ -21,6 +21,11 @@ export class Transaction {
   @JoinColumn({ name: 'recording_id' })
   recording: Recording;
 
+  // Palm project submissions are stored separately from audio recordings.
+  // For palm approvals, this field is populated while `recording` remains null.
+  @Column({ nullable: true })
+  palm_submission_id: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 

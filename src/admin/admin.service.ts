@@ -8,6 +8,8 @@ import { Transaction } from '../transactions/entities/transaction.entity';
 import { WalletsService } from '../wallets/wallets.service';
 import { ReviewRecordingDto } from './dto/review-recording.dto';
 import { ApprovePayoutDto } from './dto/approve-payout.dto';
+import { PalmSubmission, PalmValidationStatus } from '../palms/entities/palm-submission.entity';
+import { ReviewPalmSubmissionDto } from './dto/review-palm-submission.dto';
 
 @Injectable()
 export class AdminService {
@@ -20,6 +22,8 @@ export class AdminService {
     private readonly payoutsRepository: Repository<PayoutRequest>,
     @InjectRepository(Transaction)
     private readonly transactionsRepository: Repository<Transaction>,
+    @InjectRepository(PalmSubmission)
+    private readonly palmSubmissionsRepository: Repository<PalmSubmission>,
     private readonly walletsService: WalletsService,
   ) {}
 
@@ -100,5 +104,68 @@ export class AdminService {
 
     request.status = dto.status;
     return this.payoutsRepository.save(request);
+  }
+
+  async getAllPalmSubmissions(status?: PalmValidationStatus) {
+    const whereCondition = status ? { validation_status: status } : {};
+    return this.palmSubmissionsRepository.find({
+      where: whereCondition,
+      relations: ['user', 'photos'],
+      order: { upload_date: 'DESC' },
+    });
+  }
+
+  async getPalmSubmissionById(id: string) {
+    const submission = await this.palmSubmissionsRepository.findOne({
+      where: { id },
+      relations: ['user', 'photos'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Palm submission not found');
+    }
+
+    return submission;
+  }
+
+  async reviewPalmSubmission(dto: ReviewPalmSubmissionDto) {
+    const submission = await this.palmSubmissionsRepository.findOne({
+      where: { id: dto.submission_id },
+      relations: ['user'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Palm submission not found');
+    }
+
+    const payoutRate = Number(process.env.PALM_APPROVAL_PAYOUT ?? 1);
+
+    if (dto.status === PalmValidationStatus.APPROVED && submission.validation_status !== PalmValidationStatus.APPROVED) {
+      if (!Number.isFinite(payoutRate) || payoutRate <= 0) {
+        throw new BadRequestException('Invalid PALM_APPROVAL_PAYOUT configuration');
+      }
+
+      await this.walletsService.credit(submission.user.id, payoutRate);
+
+      const transaction = this.transactionsRepository.create({
+        user: { id: submission.user.id } as User,
+        amount: payoutRate,
+        status: 'completed',
+        recording: null as any,
+        palm_submission_id: submission.id,
+      });
+
+      await this.transactionsRepository.save(transaction);
+      submission.payment_status = 'paid';
+      submission.rejection_reason = null;
+    }
+
+    if (dto.status === PalmValidationStatus.REJECTED) {
+      submission.rejection_reason = dto.rejection_reason ?? submission.rejection_reason;
+      submission.payment_status = 'pending';
+    }
+
+    submission.validation_status = dto.status;
+    return this.palmSubmissionsRepository.save(submission);
   }
 }

@@ -7,13 +7,15 @@ import { Recording } from '../recordings/entities/recording.entity';
 import { PayoutRequest } from '../payouts/entities/payout-request.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { WalletsModule } from '../wallets/wallets.module';
+import { PalmSubmission } from '../palms/entities/palm-submission.entity';
+import { AdminGuard } from './admin.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Recording, PayoutRequest, Transaction]),
+    TypeOrmModule.forFeature([User, Recording, PayoutRequest, Transaction, PalmSubmission]),
     WalletsModule,
   ],
-  providers: [AdminService],
+  providers: [AdminService, AdminGuard],
   controllers: [AdminController],
 })
 export class AdminModule {}

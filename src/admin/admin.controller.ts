@@ -1,15 +1,18 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { ReviewRecordingDto } from './dto/review-recording.dto';
 import { ApprovePayoutDto } from './dto/approve-payout.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ValidationStatus } from '../recordings/entities/recording.entity';
+import { AdminGuard } from './admin.guard';
+import { PalmValidationStatus } from '../palms/entities/palm-submission.entity';
+import { ReviewPalmSubmissionDto } from './dto/review-palm-submission.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth('JWT-auth')
 @Controller('admin')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
@@ -43,5 +46,28 @@ export class AdminController {
   @ApiResponse({ status: 400, description: 'Request is no longer pending.' })
   approvePayout(@Body() dto: ApprovePayoutDto) {
     return this.adminService.approvePayout(dto);
+  }
+
+  @Get('palm-submissions')
+  @ApiOperation({ summary: 'List all palm submissions', description: 'Returns palm submissions with user info, optionally filtered by status.' })
+  @ApiQuery({ name: 'status', required: false, enum: PalmValidationStatus, description: 'Filter by validation status' })
+  @ApiResponse({ status: 200, description: 'List of palm submissions with user and photo info.' })
+  getPalmSubmissions(@Query('status') status?: PalmValidationStatus) {
+    return this.adminService.getAllPalmSubmissions(status);
+  }
+
+  @Get('palm-submissions/:id')
+  @ApiOperation({ summary: 'Get a palm submission by id' })
+  @ApiResponse({ status: 200, description: 'Palm submission found.' })
+  getPalmSubmissionById(@Param('id') id: string) {
+    return this.adminService.getPalmSubmissionById(id);
+  }
+
+  @Post('palm-submissions/review')
+  @ApiOperation({ summary: 'Review a palm submission', description: 'Approve or reject a palm submission. If approved, the user wallet is credited $1.' })
+  @ApiResponse({ status: 201, description: 'Palm submission reviewed successfully.' })
+  @ApiResponse({ status: 404, description: 'Palm submission not found.' })
+  reviewPalmSubmission(@Body() dto: ReviewPalmSubmissionDto) {
+    return this.adminService.reviewPalmSubmission(dto);
   }
 }

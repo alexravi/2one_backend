@@ -46,4 +46,15 @@ export class WalletsService {
     wallet.balance -= amount;
     await this.walletsRepository.save(wallet);
   }
+
+  async credit(userId: string, amount: number): Promise<void> {
+    const wallet = await this.walletsRepository.findOne({ where: { user: { id: userId } } });
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    wallet.balance += amount;
+    await this.walletsRepository.save(wallet);
+  }
 }
